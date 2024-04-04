@@ -1,0 +1,14 @@
+\begin{thebibliography}{1}
+
+\bibitem{ibm_overfitting}
+{IBM}.
+\newblock What is overfitting?
+\newblock \url{https://www.ibm.com/topics/overfitting}.
+\newblock Accessed: March 18, 2024.
+
+\bibitem{muresan2018fruit}
+Horea Muresan and Mihai Oltean.
+\newblock Fruit recognition from images using deep learning.
+\newblock {\em Acta Univ. Sapientiae, Informatica}, 10(1):26--42, 2018.
+
+\end{thebibliography}
