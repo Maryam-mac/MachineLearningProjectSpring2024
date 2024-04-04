@@ -313,6 +313,7 @@ The below code uses the default kernel function for the Support Vector Classifie
 
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 
 # Define C values
 C_values = [0.01, 0.1, 1.0, 10, 100]
@@ -323,8 +324,8 @@ test_scores = {}
 
 # Train SVM models for different C values
 for C in C_values:
-    # Initialize SVM model
-    svm_model = SVC(C=C)
+    # Initialize SVM model with linear kernel
+    svm_model = SVC(C=C, kernel='linear')
 
     # Train the model
     svm_model.fit(image_vectors_array, labels_array)
@@ -343,12 +344,29 @@ for C in C_values:
     test_accuracy = accuracy_score(test_labels_array, test_predictions)
     test_scores[C] = test_accuracy
 
+# Calculate error rates
+train_errors = [1 - train_scores[C] for C in C_values]
+test_errors = [1 - test_scores[C] for C in C_values]
+
 # Print the results
-for C in C_values:
+for i, C in enumerate(C_values):
     print(f"C Value: {C}")
     print(f"Training Accuracy: {train_scores[C]:.4f}")
     print(f"Testing Accuracy: {test_scores[C]:.4f}")
+    print(f"Train Error: {train_errors[i]:.4f}")  # Print the corresponding training error
+    print(f"Test Error: {test_errors[i]:.4f}")    # Print the corresponding testing error
     print()
+
+# Plotting
+plt.figure(figsize=(5, 3))
+plt.plot(np.log(C_values), train_errors, marker='o', label='Training Error', color='blue')
+plt.plot(np.log(C_values), test_errors, marker='o', label='Test Error', color='red')
+plt.xlabel('Log of C Values')
+plt.ylabel('Error Rate')
+plt.title('SVM Performance on Training and Test Data with Linear Kernel')
+plt.grid(True)
+plt.legend()
+plt.show()
 
 """In the context of Support Vector Machines (SVM), C values represent the regularization parameter.
 
@@ -359,33 +377,12 @@ A small C value allows for a larger margin but may misclassify some points (soft
 A large C value penalizes misclassifications heavily, potentially resulting in a smaller margin (hard margin).
 
 In essence, C values determine the balance between achieving a low training error and generalizing well to unseen data.
-"""
-
-import matplotlib.pyplot as plt
-
-# Calculate error rates
-train_errors = [1 - train_scores[C] for C in C_values]
-test_errors = [1 - test_scores[C] for C in C_values]
-
-# Plotting
-plt.figure(figsize=(5, 3))
-plt.plot(np.log(C_values), train_errors, marker='o', label='Training Error', color='blue')
-plt.plot(np.log(C_values), test_errors, marker='o', label='Test Error', color='red')
-plt.xlabel('Log of C Values')
-plt.ylabel('Error Rate')
-plt.title('SVM Performance on Training and Test Data')
-plt.grid(True)
-plt.legend()
-plt.show()
-
-"""An error rate of 0.3 means that 30% of the samples in the test data are classified incorrectly by the model.
 
 We repeat for kernel = 'linear', ’RBF’, ’poly’, ’sigmoid’
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
@@ -393,9 +390,6 @@ from sklearn.model_selection import train_test_split
 # Define C values
 C_values = [0.01, 0.1, 1.0, 10, 100]
 
-# Split the data into training and testing sets
-train_image_vectors_array, test_image_vectors_array, train_labels_array, test_labels_array = \
-    train_test_split(image_vectors_array, labels_array, test_size=0.2, random_state=42)
 
 # Define kernel functions
 kernel_functions = ['linear', 'rbf', 'poly', 'sigmoid']
@@ -403,95 +397,158 @@ kernel_functions = ['linear', 'rbf', 'poly', 'sigmoid']
 # Initialize dictionaries to store results
 train_errors = {kernel: [] for kernel in kernel_functions}
 test_errors = {kernel: [] for kernel in kernel_functions}
+train_accuracies = {kernel: [] for kernel in kernel_functions}
+test_accuracies = {kernel: [] for kernel in kernel_functions}
 best_test_errors = {kernel: float('inf') for kernel in kernel_functions}
 best_train_errors = {kernel: float('inf') for kernel in kernel_functions}
-best_test_C_values = {kernel: None for kernel in kernel_functions}
-best_train_C_values = {kernel: None for kernel in kernel_functions}
+best_C_values = {kernel: None for kernel in kernel_functions}
 
 # Train SVM models for different kernel functions and C values
 for kernel in kernel_functions:
     for C in C_values:
         # Initialize SVM model
         svm_model = SVC(kernel=kernel, C=C)
-
         # Train the model
-        svm_model.fit(train_image_vectors_array, train_labels_array)
-
+        svm_model.fit(image_vectors_array, labels_array)
         # Predictions on training data
-        train_predictions = svm_model.predict(train_image_vectors_array)
-
+        train_predictions = svm_model.predict(image_vectors_array)
         # Error rate on training data
-        train_error = 1.0 - accuracy_score(train_labels_array, train_predictions)
-
+        train_error = 1.0 - accuracy_score(labels_array, train_predictions)
+        # Accuracy on training data
+        train_accuracy = accuracy_score(labels_array, train_predictions)
         # Predictions on testing data
         test_predictions = svm_model.predict(test_image_vectors_array)
-
         # Error rate on testing data
         test_error = 1.0 - accuracy_score(test_labels_array, test_predictions)
-
-        # Store errors
+        # Accuracy on testing data
+        test_accuracy = accuracy_score(test_labels_array, test_predictions)
+        # Store errors and accuracies
         train_errors[kernel].append(train_error)
         test_errors[kernel].append(test_error)
-
-        # Update best test error for this kernel
+        train_accuracies[kernel].append(train_accuracy)
+        test_accuracies[kernel].append(test_accuracy)
+        # Update best errors and corresponding C value for this kernel
         if test_error < best_test_errors[kernel]:
             best_test_errors[kernel] = test_error
-            best_test_C_values[kernel] = C
-
-        # Update best train error for this kernel
-        if train_error < best_train_errors[kernel]:
             best_train_errors[kernel] = train_error
-            best_train_C_values[kernel] = C
+            best_C_values[kernel] = C
+
+# Print performance of each kernel with each C value
+for kernel in kernel_functions:
+    print(f"Kernel: {kernel}")
+    for i, C in enumerate(C_values):
+        print(f"C value: {C}, Training Accuracy: {train_accuracies[kernel][i]}, Testing Accuracy: {test_accuracies[kernel][i]}, Train Error: {train_errors[kernel][i]}, Test Error: {test_errors[kernel][i]}")
+    print()
 
 # Plotting
-plt.figure(figsize=(5, 3))
+plt.figure(figsize=(15, 5))
 
-# Plot testing data errors
+# Plot test error rates corresponding to the best C values for each kernel
+for i, kernel in enumerate(kernel_functions, start=1):
+    plt.subplot(1, len(kernel_functions), i)
+    plt.plot(np.log(C_values), test_errors[kernel], marker='o', label='Test Error', color='red')
+    plt.plot(np.log(C_values), train_errors[kernel], marker='o', label='Train Error', color='blue')
+    plt.xlabel('Log of C Values')
+    plt.ylabel('Error Rate')
+    plt.title(f'Error Rates with {kernel} Kernel')
+    plt.grid(True)
+    if i == 1:
+        plt.legend()
+
+plt.tight_layout()
+plt.show()
+
+# Plotting best test and train errors corresponding to best C values for each kernel
+plt.figure(figsize=(10, 5))
 for kernel in kernel_functions:
-    plt.scatter([kernel], [best_test_errors[kernel]], color='blue', marker='o', s=100)
-
-# Plot training data errors
-for kernel in kernel_functions:
-    plt.scatter([kernel], [best_train_errors[kernel]], color='none', edgecolor='red', s=100)
-
-# Add labels outside the loop
-plt.scatter([], [], color='blue', marker='o', label='Best Test Error', s=100)
-plt.scatter([], [], color='none', edgecolor='red', label='Best Train Error', s=100)
-
-# Add legend
-plt.legend()
-plt.xlabel('Kernel Functions')
+    plt.scatter([kernel], [best_test_errors[kernel]], color='blue', marker='o', label='Best Test Error' if kernel == 'linear' else None, s=100)
+    plt.scatter([kernel], [best_train_errors[kernel]], color='red', marker='o', label='Best Train Error' if kernel == 'linear' else None, s=100)
+    plt.text(kernel, best_test_errors[kernel], f'C={best_C_values[kernel]}, Test Error={best_test_errors[kernel]}', ha='center', va='bottom')
+    plt.text(kernel, best_train_errors[kernel], f'C={best_C_values[kernel]}, Train Error={best_train_errors[kernel]}', ha='center', va='bottom')
+plt.xlabel('Kernel')
 plt.ylabel('Error Rate')
-plt.title('Best SVM Performance with Different Kernels')
+plt.title('Best Test and Train Error for Each Kernel')
 plt.grid(True)
 plt.legend()
 plt.show()
 
-# Read the testing image
-image_path = '/content/drive/MyDrive/TestingImages/Limes/lime.jpg'
-testing_image = cv2.imread(image_path)
-
-# Check if the image is loaded successfully
-if testing_image is not None:
-    # Display the testing image
-    plt.imshow(cv2.cvtColor(testing_image, cv2.COLOR_BGR2RGB))
-    plt.axis('off')
-    plt.show()
-
-    # Use the trained SVM model to predict the label of the testing image
-    predicted_label = svm_model.predict([testing_image.flatten()])
-
-    # Print the predicted label
-    print(f"Predicted Label: {predicted_label}")
-else:
-    print("Error: Unable to load the image")
-
 """This code plots the best performance (lowest error rate) for each kernel for both the testing and training datasets. It identifies the best performing C value for each kernel based on the lowest error rate achieved on the respective dataset.
 
-# Deep Learning - Training a Simple Convolution Neural Network Model
-
-First get the height and width of the images,
+# Let's test and see what label our trained model will predict for one of our testing images
 """
+
+import cv2
+import numpy as np
+from sklearn.svm import SVC
+
+# Define C value
+C = 10
+
+# Initialize SVM model
+svm_model = SVC(C=C, kernel='rbf')
+
+# Train the SVM model
+svm_model.fit(image_vectors_array, labels_array)
+
+# Define image paths
+image_paths = [
+    '/content/drive/MyDrive/TestingImages/Apple Red Delicious/13_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Rambutan/128_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Maracuja/0_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Avocado/45_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Apple Red 1/321_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Apple Golden 1/100_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Ginger Root/128_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Limes/113_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Potato Red/20_100.jpg',
+    '/content/drive/MyDrive/TestingImages/Apple Red Delicious/165_100.jpg',
+]
+
+# Define the actual class labels for each image
+actual_class_labels = ['Apple Red Delicious',  'Rambutan', 'Maracuja', 'Avocado', 'Apple Red 1', 'Apple Golden 1', 'Ginger Root', 'Limes', 'Potato Red', 'Apple Red Delicious']
+
+# Loop through each image path
+for i, image_path in enumerate(image_paths):
+    # Read the testing image
+    testing_image = cv2.imread(image_path)
+
+    # Check if the image is loaded successfully
+    if testing_image is not None:
+        # Convert the testing image to grayscale
+        gray_testing_image = cv2.cvtColor(testing_image, cv2.COLOR_BGR2GRAY)
+
+        # Detect keypoints
+        kp = sift.detect(gray_testing_image, None)
+
+        # Get cluster labels for the keypoints of this image
+        image_labels = kmeans.predict(np.array([kp.pt for kp in kp]))
+
+        # Count the occurrences of each cluster label
+        cluster_counts = np.bincount(image_labels, minlength=100)
+
+        # Reshape the cluster counts to match the shape of the training data
+        input_vector = cluster_counts.reshape(1, -1)
+
+        # Use the trained SVM model to predict the label of the testing image
+        predicted_label = svm_model.predict(input_vector)
+
+        # Define the class labels
+        class_labels = ['Apple Golden 1', 'Apple Red 1', 'Apple Red Delicious', 'Avocado', 'Ginger Root',
+                        'Limes', 'Maracuja', 'Papaya', 'Potato Red', 'Rambutan']
+
+        # Map the predicted index to the corresponding class label
+        predicted_class_label = class_labels[predicted_label[0]]
+
+        # Print the actual and predicted class labels
+        print(f"Actual Class Label: {actual_class_labels[i]}")
+        print(f"Predicted Class Label: {predicted_class_label}")
+
+        # Display the testing image
+        plt.imshow(cv2.cvtColor(testing_image, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+        plt.show()
+    else:
+        print("Error: Unable to load the image")
 
 import cv2
 
